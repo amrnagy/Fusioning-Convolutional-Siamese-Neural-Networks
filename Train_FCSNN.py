@@ -18,8 +18,7 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import StratifiedShuffleSplit
 from keras import optimizers
 
-#from IPython.core.display import display, HTML
-#display(HTML("<style>.container { width:95% !important; }</style>"))
+# Define the pathes for the directories of defect classes
 
 Faded_path = os.path.join("/home/keplab/Storage/Personal/Amr/Datasets/Merged_dataset_8", "Faded") 
 Covered_path = os.path.join("/home/keplab/Storage/Personal/Amr/Datasets/Merged_dataset_8", "Covered")
@@ -35,6 +34,7 @@ Faded_Scribbled_path = os.path.join("/home/keplab/Storage/Personal/Amr/Datasets/
 #You can use list filtering and the isfile function of the os.path module to separate the files from the folders.
 #isfile takes a pathname and returns 1 if the path represents a file, and 0 otherwise.
 
+# To read all images in each defect class with paths
 Faded = [os.path.join(Faded_path, f) for f in listdir(Faded_path) if isfile(join(Faded_path, f))]
 Covered = [os.path.join(Covered_path, f) for f in listdir(Covered_path) if isfile(join(Covered_path, f))]
 Scribbled = [os.path.join(Scribbled_path, f) for f in listdir(Scribbled_path) if isfile(join(Scribbled_path, f))]
@@ -43,6 +43,7 @@ Covered_Faded = [os.path.join(Covered_Faded_path, f) for f in listdir(Covered_Fa
 Covered_Scribbled = [os.path.join(Covered_Scribbled_path, f) for f in listdir(Covered_Scribbled_path) if isfile(join(Covered_Scribbled_path, f))]
 Faded_Scribbled = [os.path.join(Faded_Scribbled_path, f) for f in listdir(Faded_Scribbled_path) if isfile(join(Faded_Scribbled_path, f))]
 
+# To print how many samples in each defect class
 print(f"Total Faded: {len(Faded)}")
 print(f"Total Covered: {len(Covered)}")
 print(f"Total Covered: {len(Scribbled)}")
@@ -51,7 +52,7 @@ print(f"Total Faded: {len(Covered_Faded)}")
 print(f"Total Covered: {len(Covered_Scribbled)}")
 print(f"Total Covered: {len(Faded_Scribbled)}")
 
-
+# Deine a dataset array to store all class labels and paths of images for all classes
 dataset = []    
 for file in Faded:    
     dataset.append([Path(Faded[0]).parent.name, file])
@@ -76,10 +77,16 @@ for file in Faded_Scribbled:
 
 # set_option expand output display to see more columns   
 pd.set_option('max_colwidth', 500)
+
 #DataFrame is a 2-dimensional labeled data structure with columns of potentially different types. 
+
+# Define a Dataframe to create your dataset
 df = pd.DataFrame(dataset)
+# Define the columns of the Dataframe (first column for label and second column for image path)
 df.columns = ['Class', 'Path']
+# To know how many classes 
 total_labels = len(set(df['Class'].values))
+# To return the values (names) of the defect classes
 labels = set(df['Class'].values)
 print(labels)
 
