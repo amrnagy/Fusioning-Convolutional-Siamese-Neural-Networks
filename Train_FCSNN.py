@@ -91,13 +91,15 @@ labels = set(df['Class'].values)
 print(labels)
 
 print(f"Total number of labels: {total_labels}")
+
+# To print inforation about your dataset
 print(df.info())
 
-df.sample(n=5)
-
-
+#df.sample(n=5)
 #Viewing some samples
 
+
+# To define the input shape for an image (width, hieght, #of channels)
 image_shape = (128, 128, 3)
 
 def resize_image(img_array):
@@ -127,7 +129,6 @@ for l in labels:
 
 #Train test split from dataset
 #We will select 10 images from each class and the rest of the images will be use as test set.
-
 train_list = []
 test_list = []
 
@@ -135,7 +136,6 @@ for l in labels:
     Sign_imgs = df[df['Class']==l]    
     print(l)
     df_train, df_test = train_test_split(Sign_imgs, test_size=0.2,random_state=0)  
-    
     train_list.append(df_train)
     test_list.append(df_test)
 # labels_list = []
