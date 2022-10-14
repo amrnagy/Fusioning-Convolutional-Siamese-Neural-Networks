@@ -365,18 +365,18 @@ def FCSNN_VGG16(lr=1e-4):
     prediction = Dense(1, activation='sigmoid')(L1_distance)
     
     # Connect the inputs with the outputs
-    siamese_net = Model(inputs=[left_input,right_input], outputs=prediction)
+    FCSNN_net = Model(inputs=[left_input,right_input], outputs=prediction)
     
-    siamese_net.compile(loss="binary_crossentropy", optimizer=Adam(lr), metrics=['accuracy'])
-    print(siamese_net.summary())
+    FCSNN_net.compile(loss="binary_crossentropy", optimizer=Adam(lr), metrics=['accuracy'])
+    print(FCSNN_net.summary())
 
     # return the model
-    return siamese_net   
+    return FCSNN_net   
 
 
 
 model = FCSNN_VGG16()
-model.name = "SiameseNet_VGG16"
+model.name = "FCSNN_VGG16"
 
 
 
@@ -393,19 +393,19 @@ keras.utils.vis_utils.pydot = pyd
 
 #create your model
 #then call the function on your model
-plot_model(model, to_file='create_FC_VGG_Amr_model.png')
+plot_model(model, to_file='FCSNN_VGG16.png')
 
 #To display the input and output shapes of each layer in the plotted graph
-plot_model(model, "my_first_model_with_shape_info.png", show_shapes=True)
+plot_model(model, "FCSNN_VGG16_with_Shape_Info.png", show_shapes=True)
 
 
 
-batch_size = 30
-weights_path = join("create_FC_VGG_Amr_model.hd5")
+batch_size = 32
+weights_path = join("FCSNN_VGG16.hd5")
 
 checkpointer = ModelCheckpoint(weights_path, monitor="val_loss", verbose=1, mode='min', save_best_only=True)
-reduceLROnPlato = ReduceLROnPlateau(monitor="val_loss", factor=0.1, patience=10, verbose=1, mode='min')
-earlyStop = EarlyStopping(monitor="val_loss", mode='min', verbose=1, patience=10)
+reduceLROnPlato = ReduceLROnPlateau(monitor="val_loss", factor=0.1, patience=20, verbose=1, mode='min')
+earlyStop = EarlyStopping(monitor="val_loss", mode='min', verbose=1, patience=20)
 
 generator = Data_Generator(df, image_shape, batch_size).get_batch()
 validator = Data_Generator(df, image_shape, batch_size).get_batch()
@@ -426,6 +426,36 @@ history = model.fit_generator(generator,
 
 
 
+
+def plot_Loss_training(H, plotPath):
+	# construct a plot that plots and saves the training history
+	plt.style.use("ggplot")
+	plt.figure()
+	plt.plot(H.history["loss"], label="train_loss")
+	#plt.plot(H.history["val_loss"], label="val_loss")
+	plt.title("Training Loss")
+	plt.xlabel("Epoch #")
+	plt.ylabel("Loss")
+	plt.legend(loc="lower left")
+	plt.savefig(plotPath)
+
+def plot_Accuracy_training(H, plotPath):
+	# construct a plot that plots and saves the training history
+	plt.style.use("ggplot")
+	plt.figure()
+	plt.plot(H.history["accuracy"], label="accuracy")
+	#plt.plot(H.history["val_acc"], label="val_accuracy")
+	plt.title("Training Accuracy")
+	plt.xlabel("Epoch #")
+	plt.ylabel("Accuracy")
+	plt.legend(loc="lower left")
+	plt.savefig(plotPath)
+
+# plot the training history
+print("[INFO] plotting training history...")
+plot_Loss_training(history, PLOT_PATH_LOSS)
+plot_Accuracy_training(history, PLOT_PATH_Accuracy)
+
 #score1  = model.evaluate(validator, verbose=0)
 #print ("test loss--------------------",score1[0])
 # Draw learning curve
@@ -442,7 +472,7 @@ show_history(history)
 
 # N-way evaluation
 
-model = load_model("create_FC_VGG_Amr_model.hd5")
+model = load_model("FCSNN_VGG16.hd5")
 
 class N_way_validate(object):
     
@@ -454,16 +484,11 @@ class N_way_validate(object):
         self.n = n
         self.k_trial = k_trial
     
-    def resize_image(self, img_array):
-        img = Image.fromarray(img_array)
-        img = img.resize(image_shape[:-1])
-        return np.array(img)
-
     def load_image(self, url):
-        img = Image.open(url).convert('RGB')
-        img = np.array(img)
-        img = resize_image(img)
-        img = np.divide(img, 255)
+        img = cv2.imread(url, cv2.COLOR_BGR2RGB)
+        img = cv2.resize(img,(128, 128))       
+        img = np.array(img, dtype="float")/255
+            
         return img
 
     def get_batch(self):
@@ -538,8 +563,8 @@ class N_way_validate(object):
 
 batch, targets = N_way_validate(df, image_shape).get_batch()
 
-for n in range(len(targets)):
-    show_images([batch[0][n], batch[1][n]], mLabels[targets[n]])
+# for n in range(len(targets)):
+#     show_images([batch[0][n], batch[1][n]], mLabels[targets[n]])
 
 
 
