@@ -177,19 +177,8 @@ class Data_Generator(object):
         self.h, self.w, self.c = image_shape
         self.batch_size = batch_size
         self.labels = list(set(self.df['Class']))
-    
-    # def resize_image(self, img_array):
-    #     img = Image.fromarray(img_array)
-    #     img = img.resize(image_shape[:-1])
-    #     #img = img.resize(image_shape)
-    #     return np.array(img)
-    
-    # def load_image(self, url):
-    #     img = Image.open(url).convert('RGB')
-    #     img = np.array(img)
-    #     img = self.resize_image(img)        
-    #     return img
 
+    
     def load_image(self, url):
         img = cv2.imread(url, cv2.COLOR_BGR2RGB)
         img = cv2.resize(img,(128, 128))       
@@ -197,16 +186,7 @@ class Data_Generator(object):
             
         return img
     
-    
-    def histogram_equalization(self, image):
-        b,g,r = cv2.split(image)
-        #r = cv2.histogram_equalization(r)
-        #g = cv2.histogram_equalization(g)
-        #b = cv2.histogram_equalization(b)
-        img = np.stack((b,g,r), -1)
-        img = np.divide(img, 255)
-        return img
-    
+     
     def get_batch(self):
         
         while True:            
@@ -233,12 +213,12 @@ class Data_Generator(object):
                     image1 = self.df[self.df["Class"] == selected_label].sample(n=1)['Path'].values[0]
                     #print(image1)
                     image1 = self.load_image(image1)
-                    image1 = self.histogram_equalization(image1)
+                    
                     
                     image2 = self.df[self.df["Class"] == target_label].sample(n=1)['Path'].values[0]
                     #print(image2)
                     image2 = self.load_image(image2)
-                    image2 = self.histogram_equalization(image2)
+                  
                     
                     pairs[0][b, :, :, :] = image1
                     pairs[1][b, :, :, :] = image2
@@ -246,10 +226,10 @@ class Data_Generator(object):
                     # Positive examples
                     images = self.df[self.df['Class'] == selected_label].sample(n=2)['Path'].values
                     image1 = self.load_image(images[0])
-                    image1 = self.histogram_equalization(image1)
+                  
                     
                     image2 = self.load_image(images[1])
-                    image2 = self.histogram_equalization(image2)
+                  
                     
                     pairs[0][b, :, :, :] = image1
                     pairs[1][b, :, :, :] = image2
@@ -322,178 +302,7 @@ def euclidean_distance(vects):
     sum_square = K.sum(K.square(x - y), axis=1, keepdims=True)
     return K.sqrt(K.maximum(sum_square, K.epsilon()))
 
-    
-def create_Model():
-    """
-        Model architecture
-    """
-    input_shape = image_shape
-    # Define the tensors for the two input images
-    left_input = Input(input_shape)
-    right_input = Input(input_shape)
-    
-    # Convolutional Neural Network
-    model = Sequential()
-    model.add(Conv2D(64, (10, 10), activation='relu', input_shape=input_shape, kernel_regularizer=l2(2e-4)))
-    model.add(MaxPooling2D())
-    model.add(Conv2D(128, (7, 7), activation='relu', kernel_regularizer=l2(2e-4)))
-    model.add(MaxPooling2D())
-    model.add(Conv2D(128, (4, 4), activation='relu', kernel_regularizer=l2(2e-4)))
-    model.add(MaxPooling2D())
-    model.add(Conv2D(256, (4, 4), activation='relu', kernel_regularizer=l2(2e-4)))
-    model.add(Flatten())
-    model.add(Dense(5120, activation='sigmoid', kernel_regularizer=l2(1e-3)))
-    
-    # Generate the encodings (feature vectors) for the two images
-    encoded_l = model(left_input)
-    encoded_r = model(right_input)  
-        
-    # Add a customized layer to compute the absolute difference between the encodings
-    L1_layer = Lambda(lambda tensors:K.abs(tensors[0] - tensors[1]))
-    L1_distance = L1_layer([encoded_l, encoded_r])
-    
-    # Add a dense layer with a sigmoid unit to generate the similarity score
-    prediction = Dense(1, activation='sigmoid')(L1_distance)
-    
-    # Connect the inputs with the outputs
-    siamese_net = Model(inputs=[left_input,right_input], outputs=prediction)
-    
-    siamese_net.compile(loss="binary_crossentropy", optimizer=Adam(1e-4))
-    print(siamese_net.summary())
-    
-    # return the model
-    return siamese_net
-def create_Model_pooling():
-    """
-        Model architecture
-    """
-    input_shape = image_shape
-    # Define the tensors for the two input images
-    left_input = Input(input_shape)
-    right_input = Input(input_shape)
-    
-    # Convolutional Neural Network
-    model = Sequential()
-    model.add(Conv2D(64, (10, 10), activation='relu', input_shape=input_shape, kernel_regularizer=l2(2e-4)))
-    model.add(MaxPooling2D())
-    model.add(Conv2D(128, (7, 7), activation='relu', kernel_regularizer=l2(2e-4)))
-    model.add(MaxPooling2D())
-    model.add(Conv2D(128, (4, 4), activation='relu', kernel_regularizer=l2(2e-4)))
-    model.add(MaxPooling2D())
-    model.add(Conv2D(256, (4, 4), activation='relu', kernel_regularizer=l2(2e-4)))
-    #model.add(Flatten())
-    #model.add(Dense(5120, activation='sigmoid', kernel_regularizer=l2(1e-3)))
-    
-    # Generate the encodings (feature vectors) for the two images
-    encoded_l = model(left_input)
-    encoded_r = model(right_input)  
-
-    encoded_l_Max = MaxPooling2D()(encoded_l)
-    encoded_l_Max = Flatten()(encoded_l_Max)    
-    encoded_r_Max = MaxPooling2D()(encoded_r)
-    encoded_r_Max = Flatten()(encoded_r_Max)  
-
-    encoded_l_Ave = AveragePooling2D()(encoded_l)
-    encoded_l_Ave = Flatten()(encoded_l_Ave) 
-    encoded_r_Ave = AveragePooling2D()(encoded_r)
-    encoded_r_Ave = Flatten()(encoded_r_Ave) 
-        
-    # # Add a customized layer to compute the absolute difference between the encodings
-    L1_layer = Lambda(lambda tensors:K.abs(tensors[0] - tensors[1]))
-    L1_distance_Max = L1_layer([encoded_l_Max, encoded_r_Max])
-    L1_distance_Ave = L1_layer([encoded_l_Ave, encoded_l_Ave])
-
-    L1_distance = Concatenate(name ='Concatenate')([encoded_l_Max,encoded_l_Ave,L1_distance_Max, L1_distance_Ave])
-    
-    FC_1 = Dense(10240,  activation='relu')(L1_distance)
-    FC_1 = Dropout(0.2)(FC_1)
-
-    FC_1 = Dense(2560,  activation='relu')(FC_1)
-    FC_1 =Dropout(0.2)(FC_1)
-
-    FC_1 = Dense(1024,  activation='relu')(FC_1 )
-    FC_1 = Dropout(0.2)(FC_1)
-    
-    # Add a dense layer with a sigmoid unit to generate the similarity score
-    
-    prediction = Dense(1, activation='sigmoid')(FC_1)
-    
-    # Connect the inputs with the outputs
-    siamese_net = Model(inputs=[left_input,right_input], outputs=prediction)
-    
-    siamese_net.compile(loss="binary_crossentropy", optimizer=Adam(1e-4))
-    print(siamese_net.summary())
-    
-    # return the model
-    return siamese_net
-
-def create_FC_model():
-    """
-        Model architecture
-    """
-    input_shape = image_shape
-    # Define the tensors for the two input images
-    left_input = Input(input_shape)
-    right_input = Input(input_shape)
-    
-    # Convolutional Neural Network
-    model = Sequential()
-    model.add(Conv2D(64, (10, 10), activation='relu', input_shape=input_shape, kernel_regularizer=l2(2e-4)))
-    model.add(MaxPooling2D())
-    model.add(Conv2D(128, (7, 7), activation='relu', kernel_regularizer=l2(2e-4)))
-    model.add(MaxPooling2D())
-    model.add(Conv2D(128, (4, 4), activation='relu', kernel_regularizer=l2(2e-4)))
-    model.add(MaxPooling2D())
-    model.add(Conv2D(256, (4, 4), activation='relu', kernel_regularizer=l2(2e-4)))
-    model.add(Flatten())
-    model.add(Dense(5120, activation='sigmoid', kernel_regularizer=l2(1e-3)))
-    
-    # Generate the encodings (feature vectors) for the two images
-    encoded_l = model(left_input)
-    encoded_r = model(right_input)
-    
-    print("******************")
-    print(encoded_l)
-    print("******************")
-    # max_encoded_l  = encoded_l.reshape(-1,encoded_l[1])
-    # max_encoded_r  = encoded_r[-1:]
-    # print(max_encoded_l.shape)
-   
-    print(encoded_l)
-
-   
-        
-    # Add a customized layer to compute the absolute difference between the encodings
-    L1_layer = Lambda(lambda tensors:K.abs(tensors[0] - tensors[1]))
-    L1_distance = L1_layer([encoded_l, encoded_r])
-
-
-   
-    concatenation_layer = Concatenate(name ='Concatenate')([encoded_l, encoded_r])
-    FC_1 = Dense(10240,  activation='relu')(concatenation_layer)
-    FC_1 = Dropout(0.2)(FC_1)
-
-    FC_1 = Dense(2560,  activation='relu')(FC_1)
-    FC_1 =Dropout(0.2)(FC_1)
-
-    FC_1 = Dense(1024,  activation='relu')(FC_1 )
-    FC_1 = Dropout(0.2)(FC_1)
-
-    L1_distance = Concatenate(name ='Concatenate2')([L1_distance, FC_1])
-    
-    # Add a dense layer with a sigmoid unit to generate the similarity score
-    prediction = Dense(1, activation='sigmoid')(L1_distance)
-    
-    # Connect the inputs with the outputs
-    siamese_net = Model(inputs=[left_input,right_input], outputs=prediction)
-    
-    siamese_net.compile(loss="binary_crossentropy", optimizer=Adam(1e-4))
-    print(siamese_net.summary())
-    
-    # return the model
-    return siamese_net
-
-def create_FC_VGG_Amr_model(lr=1e-4):
+def FCSNN_VGG16(lr=1e-4):
     """
         Model architecture
     """
@@ -539,9 +348,10 @@ def create_FC_VGG_Amr_model(lr=1e-4):
     L1_distance = L1_layer([encoded_l, encoded_r])
 
     concatenation_layer = Concatenate(name ='Concatenate')([encoded_l, encoded_r])
+    #concatenation_layer = Dropout(0.2)(concatenation_layer)
     FC_1 = Dense(4096,  activation='relu')(concatenation_layer)
+    #
     FC_1 = Dropout(0.2)(FC_1)
-
     FC_1 = Dense(1024,  activation='relu')(FC_1)
     FC_1 =Dropout(0.2)(FC_1)
 
@@ -561,70 +371,11 @@ def create_FC_VGG_Amr_model(lr=1e-4):
     print(siamese_net.summary())
 
     # return the model
-    return siamese_net  
-
-def create_VGG_model_FC_End(lr=1e-4):
-    """
-        Model architecture
-    """
-    input_shape = image_shape
-    # Define the tensors for the two input images
-    left_input = Input(input_shape)
-    right_input = Input(input_shape)
-    
-    # Convolutional Neural Network
-    model = Sequential()        
-    pretrain_model = Model(inputs=classifer_model.input, outputs=classifer_model.get_output_at(-1))
-    for layer in pretrain_model.layers: # Set all layers to be trainable
-        layer.trainable = False
-    for layer in pretrain_model.layers[-4:]: # last 4 layer freeze
-        layer.trainable = True     
-    
-    model.add(pretrain_model)
-    model.add(Flatten())
-    model.add(Dense(5120, activation='sigmoid', kernel_regularizer=l2(1e-3)))
-    
-    # Generate the encodings (feature vectors) for the two images
-    encoded_l = model(left_input)
-    encoded_r = model(right_input)
-    
-    # Add a customized layer to compute the absolute difference between the encodings
-    L1_layer = Lambda(lambda tensors:K.abs(tensors[0] - tensors[1]))
-    L1_distance = L1_layer([encoded_l, encoded_r])
-
-    concatenation_layer = Concatenate(name ='Concatenate')([encoded_l, encoded_r])
-    FC_1 = Dense(10240,  activation='relu')(concatenation_layer)
-    FC_1 = Dropout(0.2)(FC_1)
-
-    FC_1 = Dense(2560,  activation='relu')(FC_1)
-    FC_1 =Dropout(0.2)(FC_1)
-
-    FC_1 = Dense(1024,  activation='relu')(FC_1 )
-      
-
-    FC_2 = Dense(10240,  activation='relu')(L1_distance)
-    FC_2 = Dropout(0.2)(FC_2)
-
-    FC_2 = Dense(2560,  activation='relu')(FC_2)
-    FC_2 =Dropout(0.2)(FC_2)
-
-    FC_2 = Dense(1024,  activation='relu')(FC_2 )
-     
-    concatenation_layer2 = Concatenate(name ='Concatenate2')([FC_1, FC_2])
-    
-    # Add a dense layer with a sigmoid unit to generate the similarity score
-    prediction = Dense(1, activation='sigmoid')(concatenation_layer2)
-    
-    # Connect the inputs with the outputs
-    siamese_net = Model(inputs=[left_input,right_input], outputs=prediction)
-    
-    siamese_net.compile(loss="binary_crossentropy", optimizer=Adam(lr))
-    print(siamese_net.summary())
-
-    # return the model
     return siamese_net   
 
-model = create_FC_VGG_Amr_model()
+
+
+model = FCSNN_VGG16()
 model.name = "SiameseNet_VGG16"
 
 
