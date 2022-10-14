@@ -116,15 +116,16 @@ def show_images(images, title=""):
     [x.axis('off') for x in ax]
     plt.show()
     
-def load_images(image_paths):
+def load_images_show(image_paths):
     images = [np.array(Image.open(img).convert('RGB')) for img in image_paths]
     images = [resize_image(img) for img in images]    
     return np.array(images)
+   
 
 # View random 3 samples from each Sign label (class)
 for l in labels:
     Sign_imgs = df[df['Class']==l]['Path']
-    Sign_imgs = load_images(Sign_imgs.values)        
+    Sign_imgs = load_images_show(Sign_imgs.values)        
     show_images(random.sample(list(Sign_imgs), 3), l)
 
 #Train test split from dataset
@@ -177,17 +178,25 @@ class Data_Generator(object):
         self.batch_size = batch_size
         self.labels = list(set(self.df['Class']))
     
-    def resize_image(self, img_array):
-        img = Image.fromarray(img_array)
-        img = img.resize(image_shape[:-1])
-        #img = img.resize(image_shape)
-        return np.array(img)
+    # def resize_image(self, img_array):
+    #     img = Image.fromarray(img_array)
+    #     img = img.resize(image_shape[:-1])
+    #     #img = img.resize(image_shape)
+    #     return np.array(img)
     
+    # def load_image(self, url):
+    #     img = Image.open(url).convert('RGB')
+    #     img = np.array(img)
+    #     img = self.resize_image(img)        
+    #     return img
+
     def load_image(self, url):
-        img = Image.open(url).convert('RGB')
-        img = np.array(img)
-        img = self.resize_image(img)        
+        img = cv2.imread(url, cv2.COLOR_BGR2RGB)
+        img = cv2.resize(img,(128, 128))       
+        img = np.array(img, dtype="float")/255
+            
         return img
+    
     
     def histogram_equalization(self, image):
         b,g,r = cv2.split(image)
